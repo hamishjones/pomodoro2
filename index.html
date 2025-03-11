@@ -119,7 +119,7 @@
         </div>
         <div>
             <button id="startBtn">Start</button>
-            <button id="stopBtn" disabled>Stop</button>
+            <button id="pauseBtn" disabled>Pause</button>
             <button id="resetBtn">Reset</button>
             <button id="themeBtn">Dark Mode</button>
         </div>
@@ -130,7 +130,7 @@
             <ul id="taskList"></ul>
         </div>
         <footer>
-            Created by <a href="https://x.com/hamishjones" target="_blank">@YourXHandle</a> with help from Grok (xAI)
+            Created by <a href="https://x.com/hamishjones" target="_blank">@hamishjones</a> with help from Grok (xAI)
         </footer>
     </div>
 
@@ -139,7 +139,7 @@
     <script>
         const timerDisplay = document.getElementById('timer');
         const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
         const resetBtn = document.getElementById('resetBtn');
         const themeBtn = document.getElementById('themeBtn');
         const status = document.getElementById('status');
@@ -158,6 +158,7 @@
         let currentCycle = 0;
         let totalCycles;
         let isDarkMode = false;
+        let isPaused = false;
 
         function formatTime(seconds) {
             const mins = Math.floor(seconds / 60);
@@ -197,7 +198,7 @@
 
         function startPomodoro() {
             isPomodoro = true;
-            timeLeft = initialTime = parseInt(pomoLengthInput.value) * 60;
+            if (!timeLeft || !isPaused) timeLeft = initialTime = parseInt(pomoLengthInput.value) * 60;
             timerDisplay.textContent = formatTime(timeLeft);
             status.textContent = `Pomodoro ${currentCycle + 1} of ${totalCycles}`;
             startTimer();
@@ -215,32 +216,44 @@
             if (timerId) clearInterval(timerId);
             timerId = setInterval(updateTimer, 1000);
             startBtn.disabled = true;
-            stopBtn.disabled = false;
+            pauseBtn.disabled = false;
+            pauseBtn.textContent = 'Pause';
+            resetBtn.disabled = false;
             pomoLengthInput.disabled = true;
             restLengthInput.disabled = true;
             cyclesInput.disabled = true;
+            isPaused = false;
         }
 
-        function stopTimer() {
+        function pauseTimer() {
             if (timerId) {
                 clearInterval(timerId);
                 timerId = null;
+                pauseBtn.textContent = 'Resume';
+                startBtn.disabled = false;
+                isPaused = true;
+            } else if (isPaused) {
+                startTimer();
             }
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
         }
 
         function resetTimer() {
-            stopTimer();
+            if (timerId) clearInterval(timerId);
+            timerId = null;
             timeLeft = initialTime = parseInt(pomoLengthInput.value) * 60;
             timerDisplay.textContent = formatTime(timeLeft);
             progressCircle.style.strokeDashoffset = 565.48;
             currentCycle = 0;
             totalCycles = parseInt(cyclesInput.value);
             status.textContent = '';
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            pauseBtn.textContent = 'Pause';
+            resetBtn.disabled = false;
             pomoLengthInput.disabled = false;
             restLengthInput.disabled = false;
             cyclesInput.disabled = false;
+            isPaused = false;
         }
 
         function toggleTheme() {
@@ -262,7 +275,7 @@
             totalCycles = parseInt(cyclesInput.value);
             startPomodoro();
         });
-        stopBtn.addEventListener('click', stopTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
         resetBtn.addEventListener('click', resetTimer);
         themeBtn.addEventListener('click', toggleTheme);
         addTaskBtn.addEventListener('click', addTask);

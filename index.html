@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .timer {
+            font-size: 48px;
+            margin: 20px 0;
+        }
+        .controls input {
+            margin: 5px;
+            padding: 5px;
+            width: 60px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pomodoro Timer</h1>
+        <div class="timer" id="timer">25:00</div>
+        <div class="controls">
+            <div>
+                <label>Pomodoro (min):</label>
+                <input type="number" id="pomoLength" value="25" min="1" max="60">
+            </div>
+            <div>
+                <label>Rest (min):</label>
+                <input type="number" id="restLength" value="5" min="1" max="60">
+            </div>
+            <div>
+                <label>Cycles:</label>
+                <input type="number" id="cycles" value="4" min="1" max="10">
+            </div>
+        </div>
+        <div>
+            <button id="startBtn">Start</button>
+            <button id="stopBtn" disabled>Stop</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const timerDisplay = document.getElementById('timer');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const status = document.getElementById('status');
+        const pomoLengthInput = document.getElementById('pomoLength');
+        const restLengthInput = document.getElementById('restLength');
+        const cyclesInput = document.getElementById('cycles');
+
+        let timeLeft;
+        let timerId = null;
+        let isPomodoro = true;
+        let currentCycle = 0;
+        let totalCycles;
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timerDisplay.textContent = formatTime(timeLeft);
+
+            if (timeLeft <= 0) {
+                clearInterval(timerId);
+                timerId = null;
+                
+                if (isPomodoro) {
+                    currentCycle++;
+                    if (currentCycle < totalCycles) {
+                        startRest();
+                    } else {
+                        status.textContent = 'All cycles completed!';
+                        resetTimer();
+                    }
+                } else {
+                    startPomodoro();
+                }
+            }
+        }
+
+        function startPomodoro() {
+            isPomodoro = true;
+            timeLeft = parseInt(pomoLengthInput.value) * 60;
+            timerDisplay.textContent = formatTime(timeLeft);
+            status.textContent = `Pomodoro ${currentCycle + 1} of ${totalCycles}`;
+            startTimer();
+        }
+
+        function startRest() {
+            isPomodoro = false;
+            timeLeft = parseInt(restLengthInput.value) * 60;
+            timerDisplay.textContent = formatTime(timeLeft);
+            status.textContent = `Rest after Pomodoro ${currentCycle}`;
+            startTimer();
+        }
+
+        function startTimer() {
+            if (timerId) clearInterval(timerId); // Prevent multiple intervals
+            timerId = setInterval(updateTimer, 1000);
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            pomoLengthInput.disabled = true;
+            restLengthInput.disabled = true;
+            cyclesInput.disabled = true;
+        }
+
+        function stopTimer() {
+            if (timerId) {
+                clearInterval(timerId);
+                timerId = null;
+            }
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+
+        function resetTimer() {
+            stopTimer();
+            timeLeft = parseInt(pomoLengthInput.value) * 60;
+            timerDisplay.textContent = formatTime(timeLeft);
+            currentCycle = 0;
+            totalCycles = parseInt(cyclesInput.value);
+            status.textContent = '';
+            pomoLengthInput.disabled = false;
+            restLengthInput.disabled = false;
+            cyclesInput.disabled = false;
+        }
+
+        startBtn.addEventListener('click', () => {
+            totalCycles = parseInt(cyclesInput.value);
+            startPomodoro();
+        });
+
+        stopBtn.addEventListener('click', stopTimer);
+        resetBtn.addEventListener('click', resetTimer);
+
+        // Initial setup
+        resetTimer();
+    </script>
+</body>
+</html>

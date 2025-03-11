@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pomodoro Timer</title>
+    <title>Productivity Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,6 +22,8 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             transition: background-color 0.3s, color 0.3s;
+            max-width: 800px;
+            width: 100%;
         }
         .dark-mode {
             background-color: #333;
@@ -74,19 +76,36 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
-        #status, #tasks {
+        #status {
             margin-top: 10px;
         }
-        #taskInput {
-            width: 200px;
+        #taskManager {
+            margin-top: 20px;
+            text-align: left;
+        }
+        #taskForm {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        #taskTitle, #taskGoal {
             padding: 5px;
+            flex: 1;
         }
         #taskList {
-            list-style: none;
-            padding: 0;
+            border-collapse: collapse;
+            width: 100%;
         }
-        #taskList li {
-            margin: 5px 0;
+        #taskList th, #taskList td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        #taskList th {
+            background-color: #f2f2f2;
+        }
+        .dark-mode #taskList th {
+            background-color: #555;
         }
         footer {
             margin-top: 20px;
@@ -96,7 +115,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Pomodoro Timer</h1>
+        <h1>Productivity Dashboard</h1>
         <div class="timer-container">
             <svg width="200" height="200">
                 <circle class="progress" cx="100" cy="100" r="90" stroke-dasharray="565.48" stroke-dashoffset="0"></circle>
@@ -124,10 +143,24 @@
             <button id="themeBtn">Dark Mode</button>
         </div>
         <div id="status"></div>
-        <div id="tasks">
-            <input type="text" id="taskInput" placeholder="Add a task">
-            <button id="addTaskBtn">Add</button>
-            <ul id="taskList"></ul>
+        <div id="taskManager">
+            <h3>Task Planner</h3>
+            <div id="taskForm">
+                <input type="text" id="taskTitle" placeholder="Task Title">
+                <input type="text" id="taskGoal" placeholder="Goal for this Pomodoro">
+                <button id="addTaskBtn">Add Task</button>
+            </div>
+            <table id="taskList">
+                <thead>
+                    <tr>
+                        <th>Cycle</th>
+                        <th>Title</th>
+                        <th>Goal</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
         <footer>
             Created by <a href="https://x.com/hamishjones" target="_blank">@hamishjones</a> with help from Grok (xAI)
@@ -146,9 +179,10 @@
         const pomoLengthInput = document.getElementById('pomoLength');
         const restLengthInput = document.getElementById('restLength');
         const cyclesInput = document.getElementById('cycles');
-        const taskInput = document.getElementById('taskInput');
+        const taskTitleInput = document.getElementById('taskTitle');
+        const taskGoalInput = document.getElementById('taskGoal');
         const addTaskBtn = document.getElementById('addTaskBtn');
-        const taskList = document.getElementById('taskList');
+        const taskListBody = document.getElementById('taskList').querySelector('tbody');
         const progressCircle = document.querySelector('.progress');
         const alertSound = document.getElementById('alertSound');
 
@@ -159,6 +193,7 @@
         let totalCycles;
         let isDarkMode = false;
         let isPaused = false;
+        let tasks = [];
 
         function formatTime(seconds) {
             const mins = Math.floor(seconds / 60);
@@ -183,7 +218,9 @@
                 alertSound.play();
                 
                 if (isPomodoro) {
+                    if (tasks[currentCycle]) tasks[currentCycle].status = 'Completed';
                     currentCycle++;
+                    updateTaskList();
                     if (currentCycle < totalCycles) {
                         startRest();
                     } else {
@@ -200,7 +237,9 @@
             isPomodoro = true;
             if (!timeLeft || !isPaused) timeLeft = initialTime = parseInt(pomoLengthInput.value) * 60;
             timerDisplay.textContent = formatTime(timeLeft);
-            status.textContent = `Pomodoro ${currentCycle + 1} of ${totalCycles}`;
+            status.textContent = `Pomodoro ${currentCycle + 1} of ${totalCycles}${tasks[currentCycle] ? `: ${tasks[currentCycle].title}` : ''}`;
+            if (tasks[currentCycle]) tasks[currentCycle].status = 'In Progress';
+            updateTaskList();
             startTimer();
         }
 
@@ -254,6 +293,8 @@
             restLengthInput.disabled = false;
             cyclesInput.disabled = false;
             isPaused = false;
+            tasks.forEach(task => task.status = 'Planned');
+            updateTaskList();
         }
 
         function toggleTheme() {
@@ -263,23 +304,49 @@
         }
 
         function addTask() {
-            if (taskInput.value.trim()) {
-                const li = document.createElement('li');
-                li.textContent = taskInput.value;
-                taskList.appendChild(li);
-                taskInput.value = '';
+            if (taskTitleInput.value.trim() && taskGoalInput.value.trim()) {
+                const task = {
+                    title: taskTitleInput.value,
+                    goal: taskGoalInput.value,
+                    status: 'Planned'
+                };
+                tasks.push(task);
+                taskTitleInput.value = '';
+                taskGoalInput.value = '';
+                updateTaskList();
             }
+        }
+
+        function updateTaskList() {
+            taskListBody.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${task.title}</td>
+                    <td>${task.goal}</td>
+                    <td>${task.status}</td>
+                `;
+                taskListBody.appendChild(row);
+            });
         }
 
         startBtn.addEventListener('click', () => {
             totalCycles = parseInt(cyclesInput.value);
+            if (tasks.length < totalCycles) {
+                status.textContent = `Please add tasks for all ${totalCycles} Pomodoros.`;
+                return;
+            }
             startPomodoro();
         });
         pauseBtn.addEventListener('click', pauseTimer);
         resetBtn.addEventListener('click', resetTimer);
         themeBtn.addEventListener('click', toggleTheme);
         addTaskBtn.addEventListener('click', addTask);
-        taskInput.addEventListener('keypress', (e) => {
+        taskTitleInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+        taskGoalInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') addTask();
         });
 
